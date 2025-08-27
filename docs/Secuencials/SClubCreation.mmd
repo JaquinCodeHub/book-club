@@ -1,0 +1,69 @@
+sequenceDiagram
+    participant U1 as Usuario 1 (Creador)
+    participant U2 as Usuario 2 (Miembro)
+    participant WA as Web App
+    participant AG as API Gateway
+    participant CS as Club Service
+    participant US as User Service
+    participant NS as Notification Service
+    participant DB as Database
+    participant MQ as Message Queue
+
+    Note over U1, MQ: DIAGRAMA 4: CREACIÓN Y UNIÓN A CLUB DE LECTURA
+
+    %% Creación del Club
+    U1->>WA: 1. Navega a "Crear Club"
+    WA->>U1: 2. Muestra formulario de creación
+    U1->>WA: 3. Completa datos del club
+    WA->>AG: 4. POST /clubs (datos del club)
+    AG->>CS: 5. Procesa creación del club
+    CS->>DB: 6. Verifica unicidad del nombre
+    DB->>CS: 7. Nombre disponible
+    CS->>DB: 8. Crea nuevo club
+    DB->>CS: 9. Club creado exitosamente
+    CS->>DB: 10. Asigna creador como administrador
+    DB->>CS: 11. Rol asignado
+    CS->>MQ: 12. Publica evento "ClubCreado"
+    CS->>AG: 13. Club creado exitosamente
+    AG->>WA: 14. Confirmación de creación
+    WA->>U1: 15. Redirige a página del club
+
+    Note over U1, MQ: Otro usuario descubre y se une al club
+
+    %% Búsqueda y descubrimiento de club
+    U2->>WA: 16. Busca clubes de lectura
+    WA->>AG: 17. GET /clubs/search?q=ciencia ficción
+    AG->>CS: 18. Busca clubes por criterio
+    CS->>DB: 19. Consulta clubes disponibles
+    DB->>CS: 20. Lista de clubes
+    CS->>AG: 21. Resultados de búsqueda
+    AG->>WA: 22. Lista de clubes
+    WA->>U2: 23. Muestra clubes encontrados
+
+    %% Proceso de unión al club
+    U2->>WA: 24. Selecciona club y hace clic "Unirse"
+    WA->>AG: 25. POST /clubs/{clubId}/join
+    AG->>CS: 26. Procesa solicitud de unión
+    CS->>DB: 27. Verifica disponibilidad (límite miembros)
+    DB->>CS: 28. Espacio disponible
+    CS->>DB: 29. Verifica que usuario no es miembro
+    DB->>CS: 30. Usuario no es miembro actual
+    CS->>DB: 31. Agrega usuario como miembro
+    DB->>CS: 32. Miembro agregado exitosamente
+    CS->>DB: 33. Actualiza contador de miembros
+    DB->>CS: 34. Contador actualizado
+
+    %% Notificaciones
+    CS->>MQ: 35. Publica evento "NuevoMiembro"
+    MQ->>NS: 36. Procesa evento de nuevo miembro
+    NS->>US: 37. Obtiene datos del nuevo miembro
+    US->>DB: 38. Consulta perfil del usuario
+    DB->>US: 39. Datos del usuario
+    US->>NS: 40. Información del nuevo miembro
+    NS->>DB: 41. Crea notificación para administradores
+    DB->>NS: 42. Notificación creada
+    NS->>U1: 43. Notifica nuevo miembro al creador
+
+    CS->>AG: 44. Usuario unido exitosamente
+    AG->>WA: 45. Confirmación de unión
+    WA->>U2: 46. Redirige a página del club como miembro

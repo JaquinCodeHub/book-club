@@ -1,0 +1,312 @@
+erDiagram
+    %% ===================================================================
+    %% DIAGRAMA ENTIDAD-RELACIÓN - APLICACIÓN SOCIAL DE LECTORES
+    %% ===================================================================
+    %% Este diagrama representa la estructura de base de datos normalizada (3NF)
+    %% para una aplicación web social orientada a lectores.
+    %% 
+    %% CARACTERÍSTICAS PRINCIPALES:
+    %% - Sistema de autenticación JWT con refresh tokens
+    %% - Gestión de usuarios con roles y privacidad configurable
+    %% - Catálogo completo de libros con autores y géneros
+    %% - Sistema de reseñas y calificaciones
+    %% - Funcionalidades sociales (seguimiento, likes, comentarios)
+    %% - Clubes de lectura con gestión de miembros y lecturas grupales
+    %% - Listas de lectura personales
+    %% - Sistema de notificaciones personalizado
+    %% - Moderación de contenido con estados
+    %% ===================================================================
+
+    %% ENTIDAD: USUARIOS
+    %% Gestión completa de usuarios con autenticación, roles y configuración de privacidad
+    users {
+        bigint user_id PK "AUTO_INCREMENT"
+        varchar username UK "UNIQUE, NOT NULL, max 50 chars"
+        varchar email UK "UNIQUE, NOT NULL, max 100 chars"
+        varchar password_hash "NOT NULL, 255 chars"
+        varchar first_name "NOT NULL, max 50 chars"
+        varchar last_name "NOT NULL, max 50 chars"
+        text bio "Biografía del usuario"
+        varchar profile_picture "URL de imagen de perfil"
+        date birth_date "Fecha de nacimiento"
+        varchar location "Ubicación, max 100 chars"
+        enum privacy_level "public|friends|private, DEFAULT public"
+        boolean is_active "DEFAULT TRUE"
+        boolean email_verified "DEFAULT FALSE"
+        enum role "user|moderator|admin, DEFAULT user"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        timestamp updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE"
+    }
+
+    %% ENTIDAD: AUTORES
+    %% Información detallada de autores de libros
+    authors {
+        bigint author_id PK "AUTO_INCREMENT"
+        varchar name "NOT NULL, max 100 chars"
+        text biography "Biografía del autor"
+        date birth_date "Fecha de nacimiento"
+        date death_date "Fecha de fallecimiento (opcional)"
+        varchar nationality "max 50 chars"
+        varchar profile_image "URL de imagen del autor"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        timestamp updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE"
+    }
+
+    %% ENTIDAD: GÉNEROS
+    %% Categorización de libros por géneros literarios
+    genres {
+        int genre_id PK "AUTO_INCREMENT"
+        varchar name UK "UNIQUE, NOT NULL, max 50 chars"
+        text description "Descripción del género"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ENTIDAD: EDITORIALES
+    %% Información de casas editoriales
+    publishers {
+        int publisher_id PK "AUTO_INCREMENT"
+        varchar name UK "UNIQUE, NOT NULL, max 100 chars"
+        text description "Descripción de la editorial"
+        varchar website "Sitio web oficial"
+        year founded_year "Año de fundación"
+        varchar country "País de origen"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ENTIDAD: LIBROS
+    %% Catálogo principal de libros con metadatos completos
+    books {
+        bigint book_id PK "AUTO_INCREMENT"
+        varchar isbn UK "UNIQUE, ISBN del libro"
+        varchar title "NOT NULL, max 200 chars"
+        varchar subtitle "max 200 chars"
+        text description "Sinopsis del libro"
+        varchar cover_image "URL de portada"
+        date publication_date "Fecha de publicación"
+        int page_count "Número de páginas"
+        varchar language "DEFAULT 'es', código de idioma"
+        decimal average_rating "DEFAULT 0.00, DECIMAL(3,2)"
+        int total_ratings "DEFAULT 0"
+        int total_reviews "DEFAULT 0"
+        enum status "active|inactive, DEFAULT active"
+        int publisher_id FK "FOREIGN KEY"
+        bigint created_by FK "NOT NULL, FOREIGN KEY"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        timestamp updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE"
+    }
+
+    %% ENTIDAD: RELACIÓN LIBRO-AUTOR (M:N)
+    %% Tabla intermedia para la relación muchos a muchos entre libros y autores
+    book_authors {
+        bigint book_id PK,FK "COMPOSITE PRIMARY KEY"
+        bigint author_id PK,FK "COMPOSITE PRIMARY KEY"
+        enum role "author|co-author|editor|translator, DEFAULT author"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ENTIDAD: RELACIÓN LIBRO-GÉNERO (M:N)
+    %% Tabla intermedia para la relación muchos a muchos entre libros y géneros
+    book_genres {
+        bigint book_id PK,FK "COMPOSITE PRIMARY KEY"
+        int genre_id PK,FK "COMPOSITE PRIMARY KEY"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ENTIDAD: RESEÑAS
+    %% Sistema de reseñas y calificaciones de libros por usuarios
+    reviews {
+        bigint review_id PK "AUTO_INCREMENT"
+        bigint user_id FK "NOT NULL, FOREIGN KEY"
+        bigint book_id FK "NOT NULL, FOREIGN KEY"
+        tinyint rating "CHECK (rating >= 1 AND rating <= 5)"
+        varchar title "max 200 chars"
+        text content "Contenido de la reseña"
+        boolean is_spoiler "DEFAULT FALSE"
+        int likes_count "DEFAULT 0"
+        enum status "published|draft|archived, DEFAULT published"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        timestamp updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE"
+    }
+
+    %% ENTIDAD: COMENTARIOS EN RESEÑAS
+    %% Sistema de comentarios en las reseñas
+    review_comments {
+        bigint comment_id PK "AUTO_INCREMENT"
+        bigint review_id FK "NOT NULL, FOREIGN KEY"
+        bigint user_id FK "NOT NULL, FOREIGN KEY"
+        text content "NOT NULL, contenido del comentario"
+        int likes_count "DEFAULT 0"
+        enum status "published|hidden|deleted, DEFAULT published"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        timestamp updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE"
+    }
+
+    %% ENTIDAD: LIKES EN RESEÑAS
+    %% Sistema de likes para reseñas
+    review_likes {
+        bigint user_id PK,FK "COMPOSITE PRIMARY KEY"
+        bigint review_id PK,FK "COMPOSITE PRIMARY KEY"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ENTIDAD: LIKES EN COMENTARIOS
+    %% Sistema de likes para comentarios
+    comment_likes {
+        bigint user_id PK,FK "COMPOSITE PRIMARY KEY"
+        bigint comment_id PK,FK "COMPOSITE PRIMARY KEY"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ENTIDAD: SEGUIDORES (M:N REFLEXIVA)
+    %% Sistema de seguimiento entre usuarios
+    user_follows {
+        bigint follower_id PK,FK "COMPOSITE PRIMARY KEY"
+        bigint following_id PK,FK "COMPOSITE PRIMARY KEY"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ENTIDAD: CLUBES DE LECTURA
+    %% Gestión de clubes de lectura temáticos
+    reading_clubs {
+        bigint club_id PK "AUTO_INCREMENT"
+        varchar name "NOT NULL, max 100 chars"
+        text description "Descripción del club"
+        varchar club_image "URL de imagen del club"
+        enum privacy_type "public|private|invitation_only, DEFAULT public"
+        int max_members "DEFAULT 100"
+        int current_members "DEFAULT 0"
+        boolean is_active "DEFAULT TRUE"
+        bigint created_by FK "NOT NULL, FOREIGN KEY"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        timestamp updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE"
+    }
+
+    %% ENTIDAD: MIEMBROS DE CLUBES
+    %% Relación entre usuarios y clubes con roles
+    club_members {
+        bigint club_id PK,FK "COMPOSITE PRIMARY KEY"
+        bigint user_id PK,FK "COMPOSITE PRIMARY KEY"
+        enum role "member|moderator|admin, DEFAULT member"
+        timestamp joined_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ENTIDAD: LECTURAS DEL CLUB
+    %% Gestión de lecturas grupales en clubes
+    club_readings {
+        bigint reading_id PK "AUTO_INCREMENT"
+        bigint club_id FK "NOT NULL, FOREIGN KEY"
+        bigint book_id FK "NOT NULL, FOREIGN KEY"
+        date start_date "NOT NULL"
+        date end_date "NOT NULL"
+        enum status "upcoming|active|completed|cancelled, DEFAULT upcoming"
+        bigint created_by FK "NOT NULL, FOREIGN KEY"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        timestamp updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE"
+    }
+
+    %% ENTIDAD: PARTICIPACIÓN EN LECTURAS
+    %% Seguimiento de progreso de usuarios en lecturas grupales
+    reading_participants {
+        bigint club_id PK,FK "COMPOSITE PRIMARY KEY"
+        bigint reading_id PK,FK "COMPOSITE PRIMARY KEY"
+        bigint user_id PK,FK "COMPOSITE PRIMARY KEY"
+        tinyint progress_percentage "DEFAULT 0, CHECK (0-100)"
+        enum status "joined|reading|completed|dropped, DEFAULT joined"
+        timestamp joined_at "DEFAULT CURRENT_TIMESTAMP"
+        timestamp completed_at "NULL"
+    }
+
+    %% ENTIDAD: LISTAS DE LECTURA PERSONALES
+    %% Listas personalizadas de libros por usuario
+    reading_lists {
+        bigint list_id PK "AUTO_INCREMENT"
+        bigint user_id FK "NOT NULL, FOREIGN KEY"
+        varchar name "NOT NULL, max 100 chars"
+        text description "Descripción de la lista"
+        enum privacy_type "public|private, DEFAULT public"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+        timestamp updated_at "DEFAULT CURRENT_TIMESTAMP ON UPDATE"
+    }
+
+    %% ENTIDAD: LIBROS EN LISTAS DE LECTURA
+    %% Relación entre listas y libros con posición y notas
+    reading_list_books {
+        bigint list_id PK,FK "COMPOSITE PRIMARY KEY"
+        bigint book_id PK,FK "COMPOSITE PRIMARY KEY"
+        int position "Posición en la lista"
+        text notes "Notas personales"
+        timestamp added_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ENTIDAD: NOTIFICACIONES
+    %% Sistema de notificaciones personalizado
+    notifications {
+        bigint notification_id PK "AUTO_INCREMENT"
+        bigint user_id FK "NOT NULL, FOREIGN KEY"
+        enum type "follow|review_like|comment|club_invitation|club_reading|system"
+        varchar title "NOT NULL, max 200 chars"
+        text message "Contenido de la notificación"
+        bigint reference_id "ID de referencia según tipo"
+        enum reference_type "user|review|comment|club|reading|book"
+        boolean is_read "DEFAULT FALSE"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ENTIDAD: TOKENS DE SESIÓN
+    %% Gestión de tokens JWT y refresh tokens para autenticación
+    user_tokens {
+        bigint token_id PK "AUTO_INCREMENT"
+        bigint user_id FK "NOT NULL, FOREIGN KEY"
+        varchar refresh_token UK "UNIQUE, NOT NULL, 500 chars"
+        varchar device_info "Información del dispositivo"
+        varchar ip_address "Dirección IP, max 45 chars"
+        boolean is_active "DEFAULT TRUE"
+        timestamp expires_at "NOT NULL"
+        timestamp created_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    %% ===================================================================
+    %% RELACIONES ENTRE ENTIDADES
+    %% ===================================================================
+
+    %% Relaciones de Libros
+    books ||--o{ book_authors : "tiene"
+    authors ||--o{ book_authors : "escrito_por"
+    books ||--o{ book_genres : "clasificado_como"
+    genres ||--o{ book_genres : "categoriza"
+    books }o--|| publishers : "publicado_por"
+    books }o--|| users : "creado_por"
+
+    %% Relaciones de Reseñas y Comentarios
+    users ||--o{ reviews : "escribe"
+    books ||--o{ reviews : "reseñado_en"
+    reviews ||--o{ review_comments : "recibe"
+    users ||--o{ review_comments : "comenta"
+    reviews ||--o{ review_likes : "gustado_por"
+    users ||--o{ review_likes : "le_gusta"
+    review_comments ||--o{ comment_likes : "gustado_por"
+    users ||--o{ comment_likes : "le_gusta"
+
+    %% Relaciones Sociales
+    users ||--o{ user_follows : "sigue"
+    users ||--o{ user_follows : "seguido_por"
+
+    %% Relaciones de Clubes
+    users ||--o{ reading_clubs : "crea"
+    reading_clubs ||--o{ club_members : "tiene"
+    users ||--o{ club_members : "miembro_de"
+    reading_clubs ||--o{ club_readings : "organiza"
+    books ||--o{ club_readings : "leído_en"
+    users ||--o{ club_readings : "creado_por"
+    club_readings ||--o{ reading_participants : "participado_en"
+    users ||--o{ reading_participants : "participa"
+    reading_clubs ||--o{ reading_participants : "miembros_participan"
+
+    %% Relaciones de Listas Personales
+    users ||--o{ reading_lists : "posee"
+    reading_lists ||--o{ reading_list_books : "contiene"
+    books ||--o{ reading_list_books : "incluido_en"
+
+    %% Relaciones de Sistema
+    users ||--o{ notifications : "recibe"
+    users ||--o{ user_tokens : "autenticado_con"

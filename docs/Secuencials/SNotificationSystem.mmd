@@ -1,0 +1,66 @@
+sequenceDiagram
+    participant UA as Usuario A
+    participant UB as Usuario B
+    participant RS as Review Service
+    participant NS as Notification Service
+    participant ES as Email Service
+    participant PS as Push Service
+    participant MQ as Message Queue
+    participant DB as Database
+    participant WA as Web App
+
+    Note over UA, WA: DIAGRAMA 5: SISTEMA DE NOTIFICACIONES
+
+    %% Usuario A da like a reseña de Usuario B
+    UA->>WA: 1. Da like a reseña de Usuario B
+    WA->>RS: 2. POST /reviews/{reviewId}/like
+    RS->>DB: 3. Registra like en la reseña
+    DB->>RS: 4. Like registrado
+    RS->>DB: 5. Actualiza contador de likes
+    DB->>RS: 6. Contador actualizado
+
+    %% Publicación de evento
+    RS->>MQ: 7. Publica evento "ReseñaLikeada"
+    Note over MQ: Event: { type: "REVIEW_LIKE", reviewId, likerId, authorId }
+    
+    %% Notification Service procesa evento
+    MQ->>NS: 8. Recibe evento "ReseñaLikeada"
+    NS->>DB: 9. Obtiene preferencias de Usuario B
+    DB->>NS: 10. Preferencias de notificación
+    NS->>DB: 11. Obtiene datos de Usuario A (quien dio like)
+    DB->>NS: 12. Información de Usuario A
+    NS->>DB: 13. Obtiene datos de la reseña
+    DB->>NS: 14. Información de la reseña
+
+    %% Creación de notificación
+    NS->>DB: 15. Crea notificación in-app
+    DB->>NS: 16. Notificación creada
+    
+    %% Envío por diferentes canales
+    alt Email habilitado
+        NS->>ES: 17. Envía notificación por email
+        ES->>UB: 18. Email: "A Usuario A le gustó tu reseña"
+    end
+    
+    alt Push habilitado
+        NS->>PS: 19. Envía notificación push
+        PS->>UB: 20. Push: "Nuevo like en tu reseña"
+    end
+
+    %% Usuario B revisa notificaciones
+    UB->>WA: 21. Abre aplicación
+    WA->>NS: 22. GET /notifications?unread=true
+    NS->>DB: 23. Consulta notificaciones no leídas
+    DB->>NS: 24. Lista de notificaciones
+    NS->>WA: 25. Notificaciones no leídas
+    WA->>UB: 26. Muestra badge de notificaciones
+
+    UB->>WA: 27. Hace clic en notificaciones
+    WA->>UB: 28. Muestra lista de notificaciones
+    UB->>WA: 29. Hace clic en notificación específica
+    WA->>NS: 30. PUT /notifications/{id}/read
+    NS->>DB: 31. Marca notificación como leída
+    DB->>NS: 32. Notificación marcada
+    WA->>UB: 33. Navega a la reseña con el like
+
+    Note over UA, WA: Sistema mantiene historial completo de notificaciones

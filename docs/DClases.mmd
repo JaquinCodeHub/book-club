@@ -1,0 +1,302 @@
+classDiagram
+    %% ===================================================================
+    %% DIAGRAMA DE CLASES SIMPLIFICADO - APLICACIÓN SOCIAL DE LECTORES
+    %% ===================================================================
+    %% Este diagrama representa las clases principales y sus relaciones
+    %% más importantes, enfocándose en la funcionalidad central del sistema.
+    %% 
+    %% ENTIDADES PRINCIPALES:
+    %% - User: Gestión de usuarios y autenticación
+    %% - Book: Catálogo de libros
+    %% - Review: Sistema de reseñas y calificaciones
+    %% - ReadingClub: Clubes de lectura social
+    %% - Notification: Sistema de notificaciones
+    %% 
+    %% SERVICIOS CORE:
+    %% - AuthService: Autenticación JWT
+    %% - BookService: Gestión de libros
+    %% - ReviewService: Gestión de reseñas
+    %% - ClubService: Gestión de clubes
+    %% ===================================================================
+
+    %% ===================
+    %% ENTIDADES PRINCIPALES
+    %% ===================
+
+    class User {
+        -Long userId
+        -String username
+        -String email
+        -String passwordHash
+        -String firstName
+        -String lastName
+        -UserRole role
+        -Boolean isActive
+        
+        +validateEmail() Boolean
+        +changePassword(String newPassword) void
+        +follow(User userToFollow) void
+        +hasRole(UserRole role) Boolean
+        +canViewProfile(User viewer) Boolean
+    }
+
+    class Book {
+        -Long bookId
+        -String isbn
+        -String title
+        -String description
+        -BigDecimal averageRating
+        -Integer totalRatings
+        -BookStatus status
+        
+        +calculateAverageRating() BigDecimal
+        +updateRatingStats(Integer newRating) void
+        +canBeReviewedBy(User user) Boolean
+        +isActive() Boolean
+    }
+
+    class Author {
+        -Long authorId
+        -String name
+        -String biography
+        -String nationality
+        
+        +getBooksCount() Integer
+        +getAverageRating() BigDecimal
+    }
+
+    class Review {
+        -Long reviewId
+        -User user
+        -Book book
+        -Integer rating
+        -String title
+        -String content
+        -Boolean isSpoiler
+        -Integer likesCount
+        -ReviewStatus status
+        
+        +isValidRating() Boolean
+        +addLike(User user) void
+        +canBeEditedBy(User user) Boolean
+        +publish() void
+    }
+
+    class ReadingClub {
+        -Long clubId
+        -String name
+        -String description
+        -PrivacyType privacyType
+        -Integer maxMembers
+        -Integer currentMembers
+        -User createdBy
+        
+        +addMember(User user) Boolean
+        +createReading(Book book, Date startDate) ClubReading
+        +canJoin(User user) Boolean
+        +isFull() Boolean
+    }
+
+    class ClubReading {
+        -Long readingId
+        -ReadingClub club
+        -Book book
+        -Date startDate
+        -Date endDate
+        -ReadingStatus status
+        
+        +start() void
+        +complete() void
+        +addParticipant(User user) void
+        +isActive() Boolean
+    }
+
+    class Notification {
+        -Long notificationId
+        -User user
+        -NotificationType type
+        -String title
+        -String message
+        -Boolean isRead
+        
+        +markAsRead() void
+        +getFormattedMessage() String
+    }
+
+    %% ===================
+    %% ENUMERACIONES CLAVE
+    %% ===================
+
+    class UserRole {
+        <<enumeration>>
+        USER
+        MODERATOR
+        ADMIN
+    }
+
+    class BookStatus {
+        <<enumeration>>
+        ACTIVE
+        INACTIVE
+    }
+
+    class ReviewStatus {
+        <<enumeration>>
+        PUBLISHED
+        DRAFT
+        ARCHIVED
+    }
+
+    class PrivacyType {
+        <<enumeration>>
+        PUBLIC
+        PRIVATE
+        INVITATION_ONLY
+    }
+
+    class ReadingStatus {
+        <<enumeration>>
+        UPCOMING
+        ACTIVE
+        COMPLETED
+        CANCELLED
+    }
+
+    class NotificationType {
+        <<enumeration>>
+        FOLLOW
+        REVIEW_LIKE
+        COMMENT
+        CLUB_INVITATION
+        CLUB_READING
+        SYSTEM
+    }
+
+    %% ===================
+    %% SERVICIOS PRINCIPALES
+    %% ===================
+
+    class AuthService {
+        -UserRepository userRepository
+        -JwtTokenService jwtTokenService
+        
+        +register(UserRegistrationDTO userDto) User
+        +login(LoginDTO credentials) AuthResponseDTO
+        +refreshToken(String refreshToken) AuthResponseDTO
+        +logout(Long userId) void
+        +verifyEmail(String token) Boolean
+    }
+
+    class BookService {
+        -BookRepository bookRepository
+        -AuthorRepository authorRepository
+        
+        +createBook(CreateBookDTO bookDto) Book
+        +getBookById(Long bookId) Book
+        +searchBooks(String query) List~Book~
+        +getRecommendations(Long userId) List~Book~
+        +updateRatingStats(Long bookId) void
+    }
+
+    class ReviewService {
+        -ReviewRepository reviewRepository
+        -NotificationService notificationService
+        
+        +createReview(CreateReviewDTO reviewDto) Review
+        +updateReview(Long reviewId, UpdateReviewDTO reviewDto) Review
+        +likeReview(Long reviewId, Long userId) void
+        +getReviewsByBook(Long bookId) List~Review~
+        +moderateReview(Long reviewId, String action) void
+    }
+
+    class ClubService {
+        -ClubRepository clubRepository
+        -NotificationService notificationService
+        
+        +createClub(CreateClubDTO clubDto) ReadingClub
+        +joinClub(Long clubId, Long userId) void
+        +createReading(Long clubId, CreateReadingDTO readingDto) ClubReading
+        +updateReadingProgress(Long readingId, Long userId, Integer progress) void
+        +searchClubs(String query) List~ReadingClub~
+    }
+
+    class NotificationService {
+        -NotificationRepository notificationRepository
+        
+        +createNotification(CreateNotificationDTO notificationDto) Notification
+        +getNotifications(Long userId) List~Notification~
+        +markAsRead(Long notificationId) void
+        +sendFollowNotification(Long followerId, Long followingId) void
+    }
+
+    %% ===================
+    %% CONTROLADORES API
+    %% ===================
+
+    class AuthController {
+        -AuthService authService
+        
+        +register(UserRegistrationDTO userDto) ResponseEntity
+        +login(LoginDTO credentials) ResponseEntity
+        +logout(LogoutDTO request) ResponseEntity
+    }
+
+    class BookController {
+        -BookService bookService
+        
+        +createBook(CreateBookDTO bookDto) ResponseEntity
+        +getBook(Long bookId) ResponseEntity
+        +searchBooks(String query) ResponseEntity
+        +getRecommendations() ResponseEntity
+    }
+
+    class ReviewController {
+        -ReviewService reviewService
+        
+        +createReview(CreateReviewDTO reviewDto) ResponseEntity
+        +likeReview(Long reviewId) ResponseEntity
+        +getReviewsByBook(Long bookId) ResponseEntity
+    }
+
+    class ClubController {
+        -ClubService clubService
+        
+        +createClub(CreateClubDTO clubDto) ResponseEntity
+        +joinClub(Long clubId) ResponseEntity
+        +createReading(Long clubId, CreateReadingDTO readingDto) ResponseEntity
+        +getMyClubs() ResponseEntity
+    }
+
+    %% ===================
+    %% RELACIONES PRINCIPALES
+    %% ===================
+
+    User --> UserRole : "tiene"
+    Book --> BookStatus : "estado"
+    Review --> ReviewStatus : "estado"
+    ReadingClub --> PrivacyType : "privacidad"
+    ClubReading --> ReadingStatus : "estado"
+    Notification --> NotificationType : "tipo"
+
+    User "1" --> "0..*" Review : "escribe"
+    Book "1" --> "0..*" Review : "recibe"
+    Book "0..*" --> "1..*" Author : "escrito_por"
+    
+    User "1" --> "0..*" ReadingClub : "crea"
+    ReadingClub "1" --> "0..*" ClubReading : "organiza"
+    Book "1" --> "0..*" ClubReading : "libro_leído"
+    
+    User "1" --> "0..*" Notification : "recibe"
+
+    AuthService --> User : "gestiona"
+    BookService --> Book : "gestiona"
+    BookService --> Author : "gestiona"
+    ReviewService --> Review : "gestiona"
+    ClubService --> ReadingClub : "gestiona"
+    ClubService --> ClubReading : "gestiona"
+    NotificationService --> Notification : "gestiona"
+
+    AuthController --> AuthService : "usa"
+    BookController --> BookService : "usa"
+    ReviewController --> ReviewService : "usa"
+    ClubController --> ClubService : "usa"

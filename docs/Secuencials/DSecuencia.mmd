@@ -1,0 +1,57 @@
+sequenceDiagram
+    %% ===================================================================
+    %% DIAGRAMAS DE SECUENCIA - APLICACIÓN SOCIAL DE LECTORES
+    %% ===================================================================
+    %% Estos diagramas muestran la interacción entre componentes del sistema
+    %% para los casos de uso más importantes, ilustrando el flujo temporal
+    %% de mensajes y operaciones entre actores, servicios y bases de datos.
+    %% 
+    %% DIAGRAMAS INCLUIDOS:
+    %% 1. Registro y Verificación de Usuario
+    %% 2. Login y Autenticación JWT
+    %% 3. Creación de Reseña de Libro
+    %% 4. Creación y Unión a Club de Lectura
+    %% 5. Sistema de Notificaciones
+    %% ===================================================================
+
+    participant U as Usuario
+    participant WA as Web App
+    participant AG as API Gateway
+    participant AS as Auth Service
+    participant US as User Service
+    participant ES as Email Service
+    participant DB as Database
+    participant R as Redis Cache
+
+    Note over U, R: DIAGRAMA 1: REGISTRO Y VERIFICACIÓN DE USUARIO
+
+    %% Proceso de Registro
+    U->>WA: 1. Accede a página de registro
+    WA->>U: 2. Muestra formulario de registro
+    U->>WA: 3. Completa y envía formulario
+    WA->>AG: 4. POST /auth/register
+    AG->>AS: 5. Valida y procesa registro
+    AS->>DB: 6. Verifica email/username únicos
+    DB->>AS: 7. Confirmación de unicidad
+    AS->>DB: 8. Crea usuario (estado: no verificado)
+    DB->>AS: 9. Usuario creado exitosamente
+    AS->>AS: 10. Genera token de verificación
+    AS->>ES: 11. Envía email de verificación
+    ES->>U: 12. Email con enlace de verificación
+    AS->>AG: 13. Respuesta de registro exitoso
+    AG->>WA: 14. Usuario registrado
+    WA->>U: 15. Muestra mensaje de verificación
+
+    Note over U, R: Usuario recibe email y hace clic en enlace
+
+    %% Proceso de Verificación
+    U->>WA: 16. Hace clic en enlace de verificación
+    WA->>AG: 17. GET /auth/verify-email/{token}
+    AG->>AS: 18. Valida token de verificación
+    AS->>DB: 19. Busca usuario por token
+    DB->>AS: 20. Datos del usuario
+    AS->>DB: 21. Marca email como verificado
+    DB->>AS: 22. Email verificado exitosamente
+    AS->>AG: 23. Verificación completada
+    AG->>WA: 24. Cuenta activada
+    WA->>U: 25. Redirige a página de bienvenida

@@ -1,0 +1,60 @@
+sequenceDiagram
+    participant U as Usuario
+    participant WA as Web App
+    participant AG as API Gateway
+    participant RS as Review Service
+    participant BS as Book Service
+    participant NS as Notification Service
+    participant DB as Database
+    participant MQ as Message Queue
+
+    Note over U, MQ: DIAGRAMA 3: CREACIÓN DE RESEÑA DE LIBRO
+
+    %% Usuario navega a libro y decide escribir reseña
+    U->>WA: 1. Navega a detalle del libro
+    WA->>AG: 2. GET /books/{bookId}
+    AG->>BS: 3. Obtiene información del libro
+    BS->>DB: 4. Consulta datos del libro
+    DB->>BS: 5. Información del libro
+    BS->>AG: 6. Datos del libro
+    AG->>WA: 7. Detalle del libro
+    WA->>U: 8. Muestra página del libro
+
+    U->>WA: 9. Hace clic en "Escribir Reseña"
+    WA->>U: 10. Muestra formulario de reseña
+
+    %% Usuario completa y envía reseña
+    U->>WA: 11. Completa formulario (rating, título, contenido)
+    U->>WA: 12. Envía reseña
+    WA->>AG: 13. POST /reviews (datos de reseña)
+    AG->>RS: 14. Procesa creación de reseña
+    
+    %% Validaciones y verificaciones
+    RS->>DB: 15. Verifica que usuario no haya reseñado antes
+    DB->>RS: 16. Confirmación (sin reseña previa)
+    RS->>BS: 17. Valida que libro existe
+    BS->>DB: 18. Verifica existencia del libro
+    DB->>BS: 19. Libro encontrado
+    BS->>RS: 20. Libro válido
+
+    %% Creación de reseña
+    RS->>DB: 21. Crea nueva reseña
+    DB->>RS: 22. Reseña creada exitosamente
+    
+    %% Actualización de estadísticas del libro
+    RS->>BS: 23. Notifica nueva calificación
+    BS->>DB: 24. Actualiza rating promedio del libro
+    DB->>BS: 25. Estadísticas actualizadas
+    
+    %% Publicación de evento
+    RS->>MQ: 26. Publica evento "ReseñaCreada"
+    MQ->>NS: 27. Notifica evento a Notification Service
+    NS->>NS: 28. Procesa notificaciones para seguidores
+    NS->>DB: 29. Crea notificaciones para seguidores
+    
+    RS->>AG: 30. Reseña creada exitosamente
+    AG->>WA: 31. Confirmación de creación
+    WA->>U: 32. Muestra reseña publicada
+    
+    Note over U, MQ: Seguidores reciben notificaciones
+    NS->>U: 33. Notificación push/email a seguidores

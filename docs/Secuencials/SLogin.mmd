@@ -1,0 +1,53 @@
+sequenceDiagram
+    participant U as Usuario
+    participant WA as Web App
+    participant AG as API Gateway
+    participant AS as Auth Service
+    participant DB as Database
+    participant R as Redis Cache
+
+    Note over U, R: DIAGRAMA 2: LOGIN Y AUTENTICACIÓN JWT
+
+    %% Proceso de Login
+    U->>WA: 1. Accede a página de login
+    WA->>U: 2. Muestra formulario de login
+    U->>WA: 3. Ingresa credenciales
+    WA->>AG: 4. POST /auth/login
+    AG->>AS: 5. Procesa solicitud de login
+    AS->>DB: 6. Busca usuario por email/username
+    DB->>AS: 7. Datos del usuario
+    AS->>AS: 8. Verifica contraseña (bcrypt)
+    
+    alt Credenciales válidas
+        AS->>AS: 9. Genera JWT Access Token
+        AS->>AS: 10. Genera Refresh Token
+        AS->>R: 11. Guarda refresh token en cache
+        R->>AS: 12. Token almacenado
+        AS->>DB: 13. Actualiza último login
+        DB->>AS: 14. Login registrado
+        AS->>AG: 15. Tokens + datos usuario
+        AG->>WA: 16. Respuesta de login exitoso
+        WA->>WA: 17. Almacena tokens en localStorage
+        WA->>U: 18. Redirige a dashboard
+    else Credenciales inválidas
+        AS->>AG: 19. Error de autenticación
+        AG->>WA: 20. Login fallido
+        WA->>U: 21. Muestra mensaje de error
+    end
+
+    Note over U, R: Usuario navega por la aplicación
+
+    %% Renovación de Token
+    WA->>AG: 22. Request con token expirado
+    AG->>AS: 23. Token inválido/expirado
+    AS->>AG: 24. Error 401 Unauthorized
+    AG->>WA: 25. Token expirado
+    WA->>AG: 26. POST /auth/refresh (refresh token)
+    AG->>AS: 27. Valida refresh token
+    AS->>R: 28. Verifica refresh token en cache
+    R->>AS: 29. Token válido
+    AS->>AS: 30. Genera nuevo access token
+    AS->>AG: 31. Nuevo access token
+    AG->>WA: 32. Token renovado
+    WA->>WA: 33. Actualiza token en storage
+    WA->>AG: 34. Reintenta request original

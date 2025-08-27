@@ -1,0 +1,114 @@
+graph TD
+    %% ===================================================================
+    %% ARQUITECTURA DEL SISTEMA - APLICACIÓN SOCIAL DE LECTORES
+    %% ===================================================================
+    %% Arquitectura de microservicios escalable y mantenible
+    %% Separación clara por capas y responsabilidades
+    %% Comunicación event-driven entre servicios
+    %% ===================================================================
+
+    %% CAPA 1: CLIENTES
+    subgraph "CLIENTES"
+        Web[Web App<br/>React SPA]
+        Mobile[Mobile App<br/>React Native]
+        Admin[Admin Panel<br/>Management]
+    end
+
+    %% CAPA 2: GATEWAY
+    subgraph "ENTRADA"
+        Gateway[API Gateway<br/>• Autenticación<br/>• Rate Limiting<br/>• Routing]
+    end
+
+    %% CAPA 3: SERVICIOS
+    subgraph "SERVICIOS DE NEGOCIO"
+        Auth[Auth Service<br/>• Login/Registro<br/>• JWT Tokens<br/>• Verificación]
+        
+        User[User Service<br/>• Perfiles<br/>• Seguimiento<br/>• Configuración]
+        
+        Book[Book Service<br/>• Catálogo<br/>• Búsqueda<br/>• Metadatos]
+        
+        Review[Review Service<br/>• Reseñas<br/>• Comentarios<br/>• Calificaciones]
+        
+        Club[Club Service<br/>• Clubes<br/>• Lecturas Grupales<br/>• Miembros]
+        
+        Notify[Notification Service<br/>• Email<br/>• Push<br/>• In-App]
+    end
+
+    %% CAPA 4: DATOS
+    subgraph "ALMACENAMIENTO"
+        DB[(PostgreSQL<br/>Base Principal)]
+        Cache[(Redis<br/>Cache + Sesiones)]
+        Search[(Elasticsearch<br/>Búsqueda)]
+        Files[(S3<br/>Archivos)]
+    end
+
+    %% CAPA 5: COMUNICACIÓN
+    subgraph "EVENTOS"
+        Queue[RabbitMQ<br/>Message Queue<br/>Event Bus]
+    end
+
+    %% CAPA 6: INFRAESTRUCTURA
+    subgraph "INFRAESTRUCTURA"
+        K8s[Kubernetes<br/>Orquestación]
+        Monitor[Monitoring<br/>Logs + Métricas]
+    end
+
+    %% CAPA 7: EXTERNOS
+    subgraph "SERVICIOS EXTERNOS"
+        Email[Email Provider<br/>SendGrid]
+        Push[Push Service<br/>Firebase]
+        CDN[CDN<br/>CloudFlare]
+    end
+
+    %% CONEXIONES PRINCIPALES
+    Web --> Gateway
+    Mobile --> Gateway
+    Admin --> Gateway
+
+    Gateway --> Auth
+    Gateway --> User
+    Gateway --> Book
+    Gateway --> Review
+    Gateway --> Club
+    Gateway --> Notify
+
+    Auth --> DB
+    User --> DB
+    Book --> DB
+    Review --> DB
+    Club --> DB
+
+    User --> Cache
+    Book --> Cache
+    Auth --> Cache
+
+    Book --> Search
+    User --> Search
+
+    User --> Files
+    Book --> Files
+    Club --> Files
+
+    Auth -.-> Queue
+    User -.-> Queue
+    Review -.-> Queue
+    Club -.-> Queue
+    Notify -.-> Queue
+
+    Notify --> Email
+    Notify --> Push
+    Gateway --> CDN
+
+    K8s --> Auth
+    K8s --> User
+    K8s --> Book
+    K8s --> Review
+    K8s --> Club
+    K8s --> Notify
+
+    Monitor --> Auth
+    Monitor --> User
+    Monitor --> Book
+    Monitor --> Review
+    Monitor --> Club
+    Monitor --> Notify
